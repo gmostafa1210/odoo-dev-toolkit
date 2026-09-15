@@ -59,6 +59,7 @@ One extension for everyday Odoo development: debug mode switching, barcode scan 
 - **Browser:** Google Chrome 116 or newer. Microsoft Edge and Brave also work.
 - **Odoo:** Any Odoo 16+ instance (local, staging or production) that you can open in the browser.
 - **Screen recording:** Tab recordings are MP4 on Chrome 126 or newer (WebM on older versions). Screen and window recordings are always WebM. A microphone is optional.
+- **Operating system:** Windows, macOS or Linux. macOS needs a one-time Screen Recording permission for Chrome, and Linux on Wayland needs PipeWire capture enabled (see [11.10 Platform notes](#1110-platform-notes-windows-macos-linux)).
 - **Barcode feature:** Works best with the Odoo **Barcode** app (`stock_barcode`, Enterprise). Other scan-aware views also work.
 - **No Chrome Web Store account** is needed for local use. The $5 developer fee only applies to publishing.
 
@@ -498,7 +499,7 @@ Record Odoo workflows with sound, for tutorials, bug reports and client demos.
 | **This tab** | The current tab only, even if you switch to other tabs or windows | Tab audio, microphone | No picker, records the tab you opened the recorder from |
 | **Screen or window** | A Chrome tab, any application window, or the entire screen | System or tab audio (see note), microphone | Chrome's share picker |
 
-> **System audio support:** Chrome can share system audio from the whole screen on Windows and ChromeOS. On macOS and Linux, only tab audio can be shared in the picker. Use **This tab** mode when you need page sound on those systems.
+> **System audio support:** Chrome can share system audio from the whole screen on Windows and ChromeOS. On macOS and Linux, usually only tab audio can be shared in the picker. Use **This tab** mode when you need page sound on those systems. See [11.10 Platform notes](#1110-platform-notes-windows-macos-linux) for details.
 
 ### 11.2 Recording options
 
@@ -636,7 +637,64 @@ Good to know:
 - The recorded tab is brought to the front before the recording starts, so Chrome shows your pointer from the first second without a click.
 - If your real pointer is still missing from a **This tab** recording on your Chrome version, move the mouse over the page once after the countdown, or use **Screen or window** mode and share the window instead.
 
-### 11.10 Recording tips for Odoo tutorials
+### 11.10 Platform notes (Windows, macOS, Linux)
+
+Screen recording uses standard Chrome features and works on all three systems. The differences are in permissions and audio.
+
+| Feature | Windows | macOS | Linux |
+|---|---|---|---|
+| **This tab** mode | Works | Works | Works |
+| **Window** / **Entire Screen** | Works | Works after granting permission (see below) | Works on Xorg. On Wayland it needs PipeWire (see below) |
+| **Tab audio** | Yes | Yes | Yes |
+| **System audio** (entire screen) | Yes | Usually no. Only if Chrome's picker shows a system audio switch | Usually no. Only if Chrome's picker shows a system audio switch |
+| **Microphone** | Yes | Yes, after allowing it once | Yes |
+| **Real mouse pointer** | Yes | Yes | Yes |
+| **Tab recording format** | MP4 | MP4 | MP4 in Google Chrome. Some Chromium builds lack H.264 and fall back to WebM automatically |
+| **Screen / window format** | WebM | WebM | WebM |
+| **Shortcut** | `Alt+Shift+R` | `Option+Shift+R` | `Alt+Shift+R` |
+
+**Windows**
+
+- No setup needed.
+- For sound from other apps (for example a video call), choose **Entire Screen** and turn on **Share system audio** in the picker.
+
+**macOS (one-time setup)**
+
+1. Open **System Settings > Privacy & Security > Screen & System Audio Recording** (called **Screen Recording** on older macOS versions).
+2. Turn on **Google Chrome**.
+3. Quit and reopen Chrome.
+
+Without this permission, **Window** and **Entire Screen** recordings are black or show only the desktop wallpaper. **This tab** mode does not need it.
+
+> **[SCREENSHOT]** macOS Screen Recording permission for Google Chrome
+> ![macOS permission](screenshots/37-macos-screen-permission.png)
+
+**Linux**
+
+- **Xorg session:** works as is.
+- **Wayland session** (default on Ubuntu 22.04 and newer):
+  1. Open `chrome://flags/#enable-webrtc-pipewire-capturer`, set it to **Enabled**, and restart Chrome.
+  2. After choosing in Chrome's picker, the system shows its own share dialog. Choose the screen or window there too.
+  3. If recordings are still black, log out, click the gear icon on the login screen, choose **Ubuntu on Xorg**, and log in again.
+- To check your session type, run `echo $XDG_SESSION_TYPE` in a terminal. It prints `wayland` or `x11`.
+
+> **[SCREENSHOT]** Ubuntu system share dialog on Wayland
+> ![Wayland share dialog](screenshots/38-wayland-share-dialog.png)
+
+**Other browsers**
+
+- Works in Microsoft Edge and Brave (Chromium based).
+- Does not work in Firefox or Safari, because it is a Chrome extension.
+
+**Converting WebM to MP4**
+
+Screen and window recordings are WebM on purpose, because Chrome's MP4 recorder produces a black video when the capture size changes. To convert:
+
+```bash
+ffmpeg -i recording.webm recording.mp4
+```
+
+### 11.11 Recording tips for Odoo tutorials
 
 - Use a clean database with demo data and close unrelated tabs.
 - Set the browser zoom so fields are readable (100% to 125%).
@@ -802,6 +860,7 @@ Debugging:
 | No sound in screen recording | **Share audio** was not ticked, or the OS does not support system audio | Tick **Share audio** in the picker, or use **This tab** mode |
 | `Alt+Shift+R` does nothing | Shortcut conflict | Change it at `chrome://extensions/shortcuts` |
 | Entire screen or window recording is black | Older extension version recorded screen captures as MP4, which breaks when the capture size changes. On Linux with Wayland, screen capture can also fail | Update to 1.4.6 or later (records WebM). On Ubuntu with Wayland, make sure `chrome://flags/#enable-webrtc-pipewire-capturer` is enabled, or log in with **Ubuntu on Xorg**. Test with **Window** instead of **Entire Screen** |
+| macOS: window or screen recording is black or shows only the wallpaper | Chrome has no Screen Recording permission | **System Settings > Privacy & Security > Screen & System Audio Recording**, turn on Google Chrome, then quit and reopen Chrome |
 | Video timeline not seekable in some players | WebM files from browsers have no duration header | Use **This tab** mode on Chrome 126+ for MP4, open WebM in VLC or a browser, or convert it with ffmpeg |
 | "This recording is no longer stored" | A newer recording replaced it | Record again and download right away |
 | Odoo OWL tab missing | DevTools was open before installing | Close and reopen DevTools |
@@ -986,5 +1045,7 @@ Save each image in `screenshots/` with these names.
 | 34 | `34-popup-recording.png` | Popup Video tab during recording |
 | 35 | `35-recording-preview.png` | Recording preview page |
 | 36 | `36-click-highlight.png` | Click ring in a recording |
+| 37 | `37-macos-screen-permission.png` | macOS Screen Recording permission for Chrome |
+| 38 | `38-wayland-share-dialog.png` | Ubuntu system share dialog on Wayland |
 
 > **Tip:** You can take most of these with the extension itself. Use **Capture visible area**, crop to the relevant part, add an arrow or box, and download as PNG.
