@@ -7,7 +7,7 @@ One extension combining:
 | Debug toggle (off / debug / assets) | Popup > Debug, `Ctrl+.` (press twice for assets) |
 | Barcode scan simulator: Scan, or Scan and add to a saved list (max 6) with per-item Scan and Remove. O-CMD / O-BTN aware delays | Popup > Barcode |
 | Full page and visible area screenshots with crop and annotation (pencil, highlight, line, arrow, box, circle, text, hide data), PNG, JPEG, PDF, clipboard export | Popup > Screenshot, `Alt+Shift+P` |
-| Screen recording (this tab, window or screen) with tab/system audio, microphone, click highlights, pause, mute, MP4/WebM download | Popup > Video, `Alt+Shift+R` |
+| Screen recording (this tab, window or screen) with tab/system audio, microphone, click highlights, pause, mute, MP4 (tab) / WebM (screen) download | Popup > Video, `Alt+Shift+R` |
 | OWL component inspector (tree, props, state, highlight, $owl) | DevTools > "Odoo OWL" tab |
 | Current model / record ID / action / version | Popup > Info |
 

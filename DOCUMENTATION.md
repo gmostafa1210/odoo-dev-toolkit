@@ -1,6 +1,6 @@
 # Odoo Dev Toolkit
 
-**Version:** 1.4.4
+**Version:** 1.4.6
 **Type:** Chrome extension (Manifest V3)
 **Works with:** Odoo 16, 17, 18, 19 (backend web client)
 
@@ -58,7 +58,7 @@ One extension for everyday Odoo development: debug mode switching, barcode scan 
 
 - **Browser:** Google Chrome 116 or newer. Microsoft Edge and Brave also work.
 - **Odoo:** Any Odoo 16+ instance (local, staging or production) that you can open in the browser.
-- **Screen recording:** MP4 output needs Chrome 126 or newer; older versions record WebM. A microphone is optional.
+- **Screen recording:** Tab recordings are MP4 on Chrome 126 or newer (WebM on older versions). Screen and window recordings are always WebM. A microphone is optional.
 - **Barcode feature:** Works best with the Odoo **Barcode** app (`stock_barcode`, Enterprise). Other scan-aware views also work.
 - **No Chrome Web Store account** is needed for local use. The $5 developer fee only applies to publishing.
 
@@ -538,10 +538,10 @@ Good to know:
 ### 11.4 Record a screen or window
 
 1. Open the **Video** tab, select **Screen or window**, and click **Open recorder**.
-2. Click **Choose and start**. Chrome's picker opens.
+2. Click **Choose and start**. The recorder window expands to full screen so Chrome's picker has room, then the picker opens.
 3. Choose **Chrome Tab**, **Window** or **Entire Screen**, then select the item.
 4. To include sound, turn on **Share audio** (tab) or **Share system audio** (screen, Windows/ChromeOS).
-5. Click **Share**. The countdown starts, then recording begins.
+5. Click **Share** (or **Share with Audio**). The recorder window shrinks back to its small size, the countdown starts, then recording begins. If you click **Cancel**, the window also returns to its small size.
 
 > **[SCREENSHOT]** Chrome share picker with Share audio option
 > ![Share picker](screenshots/31-share-picker.png)
@@ -596,10 +596,12 @@ After stopping, a new tab opens with the video.
 
 | Item | Details |
 |---|---|
-| **Format** | MP4 (H.264 + AAC) on Chrome 126+, otherwise WebM (VP9/VP8 + Opus) |
+| **Format** | **This tab:** MP4 (H.264 + AAC) on Chrome 126+, otherwise WebM. **Screen or window:** always WebM (VP9/VP8 + Opus), because screen and window captures can change size while recording, which Chrome's MP4 recorder cannot handle |
 | **Quality** | Up to the tab or screen resolution, 30 frames per second, about 5 Mbps |
-| **File name** | `recording_<host>_<YYYY-MM-DD>_<HH-MM-SS>.mp4` |
+| **Resolution** | Tab: the tab's size. Screen or window: up to 1920 x 1080 (larger screens are scaled down) |
+| **File name** | `recording_<host>_<YYYY-MM-DD>_<HH-MM-SS>.mp4` or `.webm` |
 | **Approximate size** | 30 to 40 MB per minute at 1080p |
+| **Playing WebM** | Chrome, Firefox, VLC and YouTube all support WebM. To get MP4, convert with a tool such as `ffmpeg -i input.webm output.mp4` |
 
 > **Important:** Only the **latest** recording is stored. Starting a new recording deletes the previous one, so download it first.
 
@@ -799,7 +801,8 @@ Debugging:
 | Microphone not recorded | Permission blocked or no device | Allow the microphone for the extension in Chrome settings (`chrome://settings/content/microphone`) and check the level bar |
 | No sound in screen recording | **Share audio** was not ticked, or the OS does not support system audio | Tick **Share audio** in the picker, or use **This tab** mode |
 | `Alt+Shift+R` does nothing | Shortcut conflict | Change it at `chrome://extensions/shortcuts` |
-| Video timeline not seekable in some players | WebM files from browsers have no duration header | Use Chrome 126+ for MP4, or open WebM in VLC or a browser |
+| Entire screen or window recording is black | Older extension version recorded screen captures as MP4, which breaks when the capture size changes. On Linux with Wayland, screen capture can also fail | Update to 1.4.6 or later (records WebM). On Ubuntu with Wayland, make sure `chrome://flags/#enable-webrtc-pipewire-capturer` is enabled, or log in with **Ubuntu on Xorg**. Test with **Window** instead of **Entire Screen** |
+| Video timeline not seekable in some players | WebM files from browsers have no duration header | Use **This tab** mode on Chrome 126+ for MP4, open WebM in VLC or a browser, or convert it with ffmpeg |
 | "This recording is no longer stored" | A newer recording replaced it | Record again and download right away |
 | Odoo OWL tab missing | DevTools was open before installing | Close and reopen DevTools |
 | "No OWL app found" | Non-backend page or Odoo older than 16 | Open an Odoo 16+ backend page, click **Refresh tree** |
@@ -835,6 +838,7 @@ Privacy:
 - **Screen recording** has no built-in editing (trim, cut, blur). Use a video editor afterwards.
 - **Only one recording** is stored at a time.
 - **System audio** from the entire screen works on Windows and ChromeOS only.
+- **Screen and window recordings** are saved as WebM and limited to 1920 x 1080.
 - **Webcam overlay** is not included.
 - **Click highlights** are not available when sharing a window or the entire screen, and stop after a full page reload.
 - **Closing the recorder window** during recording loses the video.

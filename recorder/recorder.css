@@ -39,3 +39,6 @@ section[data-view="countdown"] .note, section[data-view="saving"] .note { margin
 .controls button[hidden] { display: none; }
 #mute[aria-pressed="true"] { background: var(--wash); color: #b3261e; }
 .controls:has(#mute[hidden]) { grid-template-columns: 1fr; }
+
+/* While Chrome's share picker is open the window is maximized */
+body.picking section { max-width: 380px; margin: 0 auto; }

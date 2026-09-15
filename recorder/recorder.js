@@ -140,7 +140,8 @@ async function captureTab() {
 
 function captureScreen() {
   const constraints = {
-    video: { frameRate: 30, cursor: "always" },
+    // Capped at Full HD to keep files small and the encoder reliable.
+    video: { frameRate: 30, width: { max: 1920 }, height: { max: 1080 }, cursor: "always" },
     audio: opts.audio,
     selfBrowserSurface: "exclude",
     surfaceSwitching: "include",
@@ -190,14 +191,36 @@ function buildMix() {
 }
 
 function pickMime() {
-  const types = [
-    "video/mp4;codecs=avc1,mp4a.40.2",
-    "video/mp4",
-    "video/webm;codecs=vp9,opus",
-    "video/webm;codecs=vp8,opus",
-    "video/webm",
-  ];
+  const mp4 = ["video/mp4;codecs=avc1,mp4a.40.2", "video/mp4"];
+  const webm = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"];
+  // Screen and window captures can change size while recording (window resize,
+  // screen capture start-up on Linux). Chrome's MP4 recorder cannot handle a
+  // size change and produces a black video, while WebM (VP9/VP8) can.
+  const types = opts.source === "screen" ? webm : [...mp4, ...webm];
   return types.find((t) => MediaRecorder.isTypeSupported(t)) || "";
+}
+
+// Screen capture can deliver tiny or empty frames for a moment after sharing
+// starts. Wait until real frames arrive before recording.
+async function waitForVideoFrames(stream, timeout = 4000) {
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.srcObject = new MediaStream(stream.getVideoTracks());
+  try {
+    await video.play();
+  } catch {
+    // Autoplay blocked: fall back to the track settings below.
+  }
+  const started = performance.now();
+  while (performance.now() - started < timeout) {
+    const s = stream.getVideoTracks()[0]?.getSettings() || {};
+    if (video.videoWidth > 16 && video.videoHeight > 16) break;
+    if (!video.videoWidth && s.width > 16 && s.height > 16 && performance.now() - started > 1500) break;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  video.pause();
+  video.srcObject = null;
 }
 
 /* ---------------- Pointer overlay ---------------- */
@@ -234,6 +257,40 @@ async function focusRecordedTab() {
   }
 }
 
+/* ---------------- Picker window size ---------------- */
+
+async function enlargeForPicker() {
+  try {
+    const win = await chrome.windows.get(windowId);
+    const bounds = { left: win.left, top: win.top, width: win.width, height: win.height };
+    document.body.classList.add("picking");
+    $("#readyNote").textContent = "Choose what to share in Chrome's dialog.";
+    const resized = new Promise((resolve) => {
+      const timer = setTimeout(resolve, 500);
+      addEventListener("resize", () => {
+        clearTimeout(timer);
+        setTimeout(resolve, 150); // let the window finish resizing
+      }, { once: true });
+    });
+    await chrome.windows.update(windowId, { state: "maximized" });
+    await resized;
+    return bounds;
+  } catch {
+    return null;
+  }
+}
+
+async function restoreWindow(bounds) {
+  document.body.classList.remove("picking");
+  if ($("#readyNote").textContent === "Choose what to share in Chrome's dialog.") $("#readyNote").textContent = "";
+  try {
+    await chrome.windows.update(windowId, { state: "normal" });
+    await chrome.windows.update(windowId, bounds);
+  } catch {
+    // Window already closed or bounds not allowed: nothing to restore.
+  }
+}
+
 /* ---------------- Recording ---------------- */
 
 async function start() {
@@ -243,9 +300,13 @@ async function start() {
   ctx = new AudioContext();
   ctx.resume().catch(() => {});
 
+  // Chrome's share picker is sized to this window, so make it full size
+  // while the picker is open and shrink it back afterwards.
+  const bounds = opts.source === "screen" ? await enlargeForPicker() : null;
   try {
     captured = opts.source === "tab" ? await captureTab() : await captureScreen();
   } catch (e) {
+    if (bounds) await restoreWindow(bounds);
     await ctx.close().catch(() => {});
     ctx = null;
     $("#start").disabled = false;
@@ -259,6 +320,8 @@ async function start() {
     return fail(`${e.message || e.name}.${hint}`);
   }
 
+  if (bounds) await restoreWindow(bounds);
+
   if (opts.source === "screen") {
     const label = captured.getVideoTracks()[0]?.label || "";
     if (label) $("#readyTarget").textContent = label;
@@ -269,6 +332,11 @@ async function start() {
   }
 
   if (opts.mic) micStream = await captureMic();
+  if (opts.source === "screen") {
+    $("#readyNote").textContent = "Starting screen capture…";
+    await waitForVideoFrames(captured);
+    $("#readyNote").textContent = "";
+  }
   buildMix();
 
   const surface = captured.getVideoTracks()[0]?.getSettings?.().displaySurface;
