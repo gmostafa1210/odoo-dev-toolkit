@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <img src="../icons/32.png" alt="" width="28" height="28">
+    <div>
+      <h1>Odoo Dev Toolkit</h1>
+      <p id="status">Checking this page…</p>
+    </div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" data-tab="debug">Debug</button>
+    <button role="tab" data-tab="barcode">Barcode</button>
+    <button role="tab" data-tab="capture">Screenshot</button>
+    <button role="tab" data-tab="video">Video</button>
+    <button role="tab" data-tab="info">Info</button>
+  </nav>
+
+  <section id="debug" class="panel">
+    <div class="modes">
+      <button class="mode odoo-only" data-mode="0">Off</button>
+      <button class="mode odoo-only" data-mode="1">Debug</button>
+      <button class="mode odoo-only" data-mode="assets">Assets</button>
+    </div>
+    <p class="hint">Keyboard: <kbd>Ctrl</kbd>+<kbd>.</kbd> toggles debug. Press <kbd>.</kbd> twice for assets.</p>
+  </section>
+
+  <section id="barcode" class="panel">
+    <textarea id="codes" rows="4" spellcheck="false"
+      placeholder="Barcode, or several in order (one per line)&#10;WH-RECEIPTS&#10;O-BTN.validate"></textarea>
+    <div class="btn-row even">
+      <button id="scan" class="primary odoo-only">Scan</button>
+      <button id="scanAdd" class="odoo-only">Scan and add</button>
+    </div>
+
+    <div class="lists-head">
+      <h2>Saved barcodes</h2>
+      <span id="listCount" class="hint"></span>
+    </div>
+    <ul id="lists" aria-label="Saved barcodes"></ul>
+
+    <div class="row">
+      <label>Delay between scans (ms)<input id="delay" type="number" min="0" step="50"></label>
+      <label>Delay before O-CMD / O-BTN (ms)<input id="cmdDelay" type="number" min="0" step="50"></label>
+    </div>
+    <label class="check"><input id="closeAfter" type="checkbox"> Close this popup after scanning</label>
+    <p id="barcodeMsg" class="hint" aria-live="polite"></p>
+  </section>
+
+  <section id="capture" class="panel">
+    <button id="shotFull" class="primary">Capture full page</button>
+    <button id="shotVisible">Capture visible area</button>
+    <p class="hint">Keyboard: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd>. The screenshot opens in a new tab with PNG, JPEG, PDF and copy options.</p>
+  </section>
+
+  <section id="video" class="panel">
+    <div id="videoIdle" class="stack">
+      <div class="seg" role="radiogroup" aria-label="What to record">
+        <button role="radio" data-source="tab">This tab</button>
+        <button role="radio" data-source="screen">Screen or window</button>
+      </div>
+      <label class="check"><input id="vAudio" type="checkbox"> <span id="vAudioLabel">Tab audio</span></label>
+      <label class="check"><input id="vMic" type="checkbox"> Microphone (your voice)</label>
+      <label class="check"><input id="vClicks" type="checkbox"> Highlight clicks</label>
+      <label class="check"><input id="vCountdown" type="checkbox"> 3 second countdown</label>
+      <button id="recStart" class="primary"><span class="rec-dot"></span> Open recorder</button>
+      <p class="hint">A small recorder window opens with Start, Pause and Stop. Keyboard: <kbd>Alt</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> starts and stops.</p>
+    </div>
+    <div id="videoActive" class="stack" hidden>
+      <p class="rec-status"><span class="rec-dot live" id="recDot"></span><span id="recStatus">Recording</span><span id="recTime" class="rec-time"></span></p>
+      <div class="btn-row">
+        <button id="recShow">Show recorder</button>
+        <button id="recStop" class="primary">Stop and save</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="info" class="panel">
+    <dl id="infoList"></dl>
+    <p class="hint">Click a value to copy it.</p>
+  </section>
+
+  <footer><a id="shortcuts" href="#">Change keyboard shortcuts</a></footer>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

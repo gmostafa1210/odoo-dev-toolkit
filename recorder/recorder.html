@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Recorder</title>
+  <link rel="stylesheet" href="recorder.css">
+</head>
+<body>
+  <!-- Ready -->
+  <section data-view="ready">
+    <h1 id="readyTitle">Record this tab</h1>
+    <p id="readyTarget" class="target"></p>
+    <ul class="summary">
+      <li id="sumAudio"></li>
+      <li id="sumMic"></li>
+      <li id="sumCountdown"></li>
+      <li id="sumCursor"></li>
+    </ul>
+    <button id="start" class="primary big" autofocus>Start recording</button>
+    <button id="cancel" class="ghost">Cancel</button>
+    <p id="readyNote" class="note" aria-live="polite"></p>
+  </section>
+
+  <!-- Countdown -->
+  <section data-view="countdown" hidden>
+    <p class="count" id="count">3</p>
+    <p class="note">Recording starts soon</p>
+  </section>
+
+  <!-- Recording -->
+  <section data-view="recording" hidden>
+    <div class="status">
+      <span class="dot" id="dot"></span>
+      <span id="stateLabel">Recording</span>
+      <span class="timer" id="timer">00:00</span>
+    </div>
+    <div class="meter" id="meterWrap" hidden>
+      <span>Mic</span><div class="bar"><div id="meter"></div></div>
+    </div>
+    <div class="controls">
+      <button id="pause">Pause</button>
+      <button id="mute" hidden>Mute mic</button>
+    </div>
+    <button id="stop" class="stop big">Stop and save</button>
+    <button id="discard" class="ghost">Discard</button>
+    <p id="recNote" class="note" aria-live="polite"></p>
+  </section>
+
+  <!-- Saving -->
+  <section data-view="saving" hidden>
+    <p class="count small">Saving…</p>
+    <p class="note">Preparing your video</p>
+  </section>
+
+  <!-- Error -->
+  <section data-view="error" hidden>
+    <h1>Could not record</h1>
+    <p id="errorText" class="note error"></p>
+    <button id="errorClose" class="primary">Close</button>
+  </section>
+
+  <script type="module" src="recorder.js"></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+:root { --plum: #714B67; --teal: #017E84; --line: #e4dfe3; --ink: #1f2430; --muted: #6b6f7b;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--ink); }
+body { margin: 0; background: #eceaee; }
+header { position: sticky; top: 0; display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center;
+  padding: 12px 20px; background: #fff; border-bottom: 1px solid var(--line); }
+h1 { margin: 0; font-size: 16px; }
+#meta { margin: 0; color: var(--muted); font-size: 12px; }
+button { padding: 8px 14px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font: inherit; cursor: pointer; }
+button.primary { background: var(--plum); border-color: var(--plum); color: #fff; font-weight: 600; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+main { max-width: 1200px; margin: 0 auto; padding: 24px; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+#msg { margin: 0; color: var(--muted); }
+video { width: 100%; max-height: 75vh; background: #000; border-radius: 8px; }
+.tip { margin: 0; max-width: 720px; text-align: center; color: var(--muted); font-size: 12px; }

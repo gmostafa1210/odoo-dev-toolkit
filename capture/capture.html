@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Screenshot</title>
+  <link rel="stylesheet" href="capture.css">
+</head>
+<body>
+  <header>
+    <div class="top">
+      <div>
+        <h1 id="title">Screenshot</h1>
+        <p id="meta"></p>
+      </div>
+      <div class="actions">
+        <button id="png" class="primary" disabled>Download PNG</button>
+        <button id="jpg" disabled>Download JPEG</button>
+        <button id="pdf" disabled>Save as PDF</button>
+        <button id="copy" disabled>Copy image</button>
+      </div>
+    </div>
+
+    <div class="editbar" role="toolbar" aria-label="Annotation tools">
+      <div class="group" id="tools">
+        <button data-tool="crop" title="Crop (C). Drag an area, hold Shift for square, Esc to cancel"><span>⛶</span>Crop</button>
+        <button data-tool="pen" title="Pencil (P)"><span>✎</span>Pencil</button>
+        <button data-tool="highlight" title="Highlighter (H)"><span>▬</span>Highlight</button>
+        <button data-tool="line" title="Line (L), hold Shift to snap"><span>╱</span>Line</button>
+        <button data-tool="arrow" title="Arrow (A), hold Shift to snap"><span>➔</span>Arrow</button>
+        <button data-tool="rect" title="Box (R), hold Shift for square"><span>▭</span>Box</button>
+        <button data-tool="ellipse" title="Circle (E), hold Shift for circle"><span>◯</span>Circle</button>
+        <button data-tool="text" title="Text (T)"><span>T</span>Text</button>
+        <button data-tool="redact" title="Hide data (X)"><span>■</span>Hide</button>
+      </div>
+
+      <div class="group" id="colors">
+        <button class="swatch" data-color="#e03131" style="--c:#e03131" title="Red"></button>
+        <button class="swatch" data-color="#f08c00" style="--c:#f08c00" title="Orange"></button>
+        <button class="swatch" data-color="#fcc419" style="--c:#fcc419" title="Yellow"></button>
+        <button class="swatch" data-color="#2f9e44" style="--c:#2f9e44" title="Green"></button>
+        <button class="swatch" data-color="#1c7ed6" style="--c:#1c7ed6" title="Blue"></button>
+        <button class="swatch" data-color="#714B67" style="--c:#714B67" title="Odoo purple"></button>
+        <button class="swatch" data-color="#000000" style="--c:#000000" title="Black"></button>
+        <label class="custom" title="Custom color"><input id="customColor" type="color" value="#e03131"></label>
+      </div>
+
+      <div class="group">
+        <label class="size">Size <input id="size" type="range" min="1" max="12" value="3"></label>
+      </div>
+
+      <div class="group">
+        <button id="undo" title="Undo (Ctrl+Z)" disabled>Undo</button>
+        <button id="redo" title="Redo (Ctrl+Y)" disabled>Redo</button>
+        <button id="clear" title="Remove all annotations and crops" disabled>Reset</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <p id="msg">Loading screenshot…</p>
+    <canvas id="board" hidden></canvas>
+  </main>
+  <canvas id="overlay"></canvas>
+
+  <script type="module" src="capture.js"></script>
+</body>
+</html>

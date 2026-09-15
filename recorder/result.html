@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Recording</title>
+  <link rel="stylesheet" href="result.css">
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="title">Screen recording</h1>
+      <p id="meta"></p>
+    </div>
+    <div class="actions">
+      <button id="download" class="primary" disabled>Download</button>
+    </div>
+  </header>
+  <main>
+    <p id="msg">Loading recording…</p>
+    <video id="player" controls hidden></video>
+    <p class="tip">To use this video in documentation, upload it to YouTube, Google Drive or your website and link to it.
+      Only the latest recording is kept, so download it before recording again.</p>
+  </main>
+  <script type="module" src="result.js"></script>
+</body>
+</html>
