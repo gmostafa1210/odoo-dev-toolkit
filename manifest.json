@@ -1,8 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "Odoo Dev Toolkit",
-  "version": "1.5.2",
-  "description": "Odoo debug toggle, barcode scan simulator, OWL inspector, full page screenshots and screen recording with audio.",
+  "name": "Dev Toolkit for Odoo",
+  "short_name": "Odoo Toolkit",
+  "version": "1.6.0",
+  "description": "Odoo developer toolkit: debug switcher, barcode simulator, OWL inspector, website inspector, screenshots and recording.",
+  "author": {
+    "email": "gmostafa1210@gmail.com"
+  },
+  "homepage_url": "https://mostafa.bd",
   "icons": {
     "16": "icons/16.png",
     "32": "icons/32.png",
@@ -10,7 +15,7 @@
     "128": "icons/128.png"
   },
   "action": {
-    "default_title": "Odoo Dev Toolkit",
+    "default_title": "Dev Toolkit for Odoo",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/16.png",
@@ -26,6 +31,11 @@
     "scripting",
     "storage",
     "tabCapture"
+  ],
+  "optional_host_permissions": [
+    "https://claude.ai/*",
+    "http://*/*",
+    "https://*/*"
   ],
   "devtools_page": "devtools/devtools.html",
   "commands": {
@@ -48,8 +58,5 @@
       },
       "description": "Start or stop screen recording"
     }
-  },
-  "optional_host_permissions": [
-    "https://claude.ai/*"
-  ]
+  }
 }

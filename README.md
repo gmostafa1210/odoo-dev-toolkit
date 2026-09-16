@@ -1,4 +1,4 @@
-# Odoo Dev Toolkit (Chrome MV3)
+# Dev Toolkit for Odoo (Chrome MV3)
 
 One extension combining:
 
@@ -9,7 +9,8 @@ One extension combining:
 | Full page and visible area screenshots with crop and annotation (pencil, highlight, line, arrow, box, circle, text, hide data), PNG, JPEG, PDF, clipboard export | Popup > Screenshot, `Alt+Shift+P` |
 | Screen recording (this tab, window or screen) with tab/system audio, microphone, click highlights, pause, mute, MP4 (tab) / WebM (screen) download | Popup > Video, `Alt+Shift+R` |
 | OWL component inspector (tree, props, state, highlight, $owl) | DevTools > "Odoo OWL" tab |
-| Current model / record ID / action / version | Popup > Info |
+| Current model / record ID / action / version | Popup > Info (Odoo pages) |
+| Website inspector: technologies, performance, SEO, security headers | Popup > Info (other websites) |
 | Claude session and weekly usage (when signed in to claude.ai) | Popup header, right side |
 
 ## Install locally
@@ -22,3 +23,8 @@ One extension combining:
 - Screenshots detect Odoo's inner scroll container (`.o_content`) automatically. Pages taller than 32000 device pixels are downscaled. Horizontal scrolling is not stitched.
 - Only the latest screenshot is kept (IndexedDB).
 - The OWL panel is a lightweight inspector. For the profiler, event log and reactivity tracking, use Odoo's official Owl devtools.
+
+---
+
+Developed by **Golam Mostafa** ([mostafa.bd](https://mostafa.bd), gmostafa1210@gmail.com).
+Not affiliated with Odoo S.A. or Anthropic PBC.

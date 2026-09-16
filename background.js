@@ -1,7 +1,10 @@
 import { saveCapture } from "./lib/db.js";
+import { captureBlockedReason, PROTECTED_ERROR, tabUrl } from "./lib/blocked-urls.js";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const BRAND = "#714B67";
+const NEUTRAL = "#6B6F7B";
+const DEFAULT_TITLE = "Dev Toolkit for Odoo";
 const MAX_CANVAS = 32000; // Chrome canvas dimension limit is 32767
 
 /* ------------------------------------------------------------------ */
@@ -51,6 +54,11 @@ chrome.commands.onCommand.addListener((command, tab) => {
 });
 
 async function toggleDebug(tabId, assets) {
+  const blocked = captureBlockedReason(await tabUrl(tabId));
+  if (blocked) {
+    showNotAvailable(tabId, blocked);
+    return;
+  }
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
@@ -71,6 +79,53 @@ async function toggleDebug(tabId, assets) {
     console.warn("Debug toggle failed:", e.message);
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* Field inspector auto-start (sites the user allowed)                 */
+/* ------------------------------------------------------------------ */
+
+const INSPECTOR_ID = "otk-field-inspector";
+const INSPECTOR_FILE = "content/field-inspector.js";
+const NOT_ODOO_ORIGINS = ["https://claude.ai/*"];
+
+async function allowedSites() {
+  const { origins = [] } = await chrome.permissions.getAll();
+  return origins.filter((o) => !NOT_ODOO_ORIGINS.includes(o) && o !== "http://*/*" && o !== "https://*/*" && o !== "<all_urls>");
+}
+
+async function syncInspectorScript() {
+  const matches = await allowedSites();
+  const existing = await chrome.scripting.getRegisteredContentScripts({ ids: [INSPECTOR_ID] }).catch(() => []);
+  try {
+    if (!matches.length) {
+      if (existing.length) await chrome.scripting.unregisterContentScripts({ ids: [INSPECTOR_ID] });
+      return;
+    }
+    const script = { id: INSPECTOR_ID, matches, js: [INSPECTOR_FILE], runAt: "document_idle", persistAcrossSessions: true };
+    if (existing.length) await chrome.scripting.updateContentScripts([script]);
+    else await chrome.scripting.registerContentScripts([script]);
+  } catch (e) {
+    console.warn("Inspector auto-start could not be updated:", e.message);
+  }
+}
+
+// Start right away in tabs of a site that was just allowed.
+async function startInOpenTabs(origins) {
+  const sites = origins.filter((o) => !NOT_ODOO_ORIGINS.includes(o));
+  if (!sites.length) return;
+  const tabs = await chrome.tabs.query({ url: sites }).catch(() => []);
+  for (const t of tabs) {
+    chrome.scripting.executeScript({ target: { tabId: t.id }, files: [INSPECTOR_FILE] }).catch(() => {});
+  }
+}
+
+chrome.permissions.onAdded.addListener(async ({ origins = [] }) => {
+  await syncInspectorScript();
+  startInOpenTabs(origins);
+});
+chrome.permissions.onRemoved.addListener(() => syncInspectorScript());
+chrome.runtime.onInstalled.addListener(() => syncInspectorScript());
+chrome.runtime.onStartup.addListener(() => syncInspectorScript());
 
 /* ------------------------------------------------------------------ */
 /* Screen recording                                                    */
@@ -162,10 +217,29 @@ function badge(tabId, text, color = BRAND) {
   chrome.action.setBadgeText({ tabId, text }).catch(() => {});
 }
 
+// Neutral "not available here" signal: grey N/A badge with the reason as the
+// icon tooltip for a short time. No error is thrown or logged.
+function showNotAvailable(tabId, reason) {
+  badge(tabId, "N/A", NEUTRAL);
+  chrome.action.setTitle({ tabId, title: `${DEFAULT_TITLE}: ${reason}` }).catch(() => {});
+  setTimeout(() => {
+    badge(tabId, "");
+    chrome.action.setTitle({ tabId, title: "" }).catch(() => {}); // "" restores the default title
+  }, 2500);
+}
+
 let busy = false;
 
 async function capture(tab, full) {
   if (busy) return;
+
+  // Protected pages: stop before anything is prepared.
+  const blocked = captureBlockedReason(await tabUrl(tab.id));
+  if (blocked) {
+    showNotAvailable(tab.id, blocked);
+    return;
+  }
+
   busy = true;
   const tabId = tab.id;
   const windowId = tab.windowId;
@@ -203,7 +277,11 @@ async function capture(tab, full) {
     await openResult(blob, info.host);
     badge(tabId, "");
   } catch (e) {
-    console.error("Capture failed:", e);
+    if (PROTECTED_ERROR.test(e?.message || "")) {
+      console.warn("Capture not available on this page:", e.message);
+    } else {
+      console.error("Capture failed:", e);
+    }
     badge(tabId, "ERR", "#C0392B");
     setTimeout(() => badge(tabId, ""), 3000);
   } finally {

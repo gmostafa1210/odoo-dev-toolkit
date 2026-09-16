@@ -1,6 +1,8 @@
 import {
   hasPermission, requestPermission, removePermission, fetchUsage, readCache, clearCache, formatReset, formatResetShort,
 } from "../lib/claude-usage.js";
+import { collectSiteInfo, CATEGORY_ORDER, reportText } from "./site-info.js";
+import { initDevTools } from "./dev-tools.js";
 
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
@@ -41,13 +43,12 @@ const save = (patch) => chrome.storage.local.set(patch);
 
 /* ---------------- Tabs ---------------- */
 
-function openTab(name) {
+function openTab(name, remember = true) {
   $$("nav button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === name)));
   $$(".panel").forEach((p) => p.classList.toggle("active", p.id === name));
-  save({ lastTab: name });
+  if (remember) save({ lastTab: name });
 }
 $$("nav button").forEach((b) => b.addEventListener("click", () => openTab(b.dataset.tab)));
-openTab(settings.lastTab);
 
 $("#shortcuts").addEventListener("click", (e) => {
   e.preventDefault();
@@ -77,6 +78,20 @@ const info = await inPage(() => {
 const isOdoo = Boolean(info);
 $$(".odoo-only").forEach((el) => (el.disabled = !isOdoo));
 
+// Debug and Barcode only make sense on Odoo pages.
+const ODOO_TABS = ["debug", "barcode"];
+if (!isOdoo) {
+  for (const name of ODOO_TABS) {
+    $(`nav button[data-tab="${name}"]`).hidden = true;
+    $(`#${name}`).hidden = true;
+  }
+}
+if (!isOdoo && ODOO_TABS.includes(settings.lastTab)) {
+  openTab("info", false); // keep the saved tab for the next Odoo page
+} else {
+  openTab(settings.lastTab);
+}
+
 if (!isOdoo) {
   $("#status").textContent = "Not an Odoo page. Screenshots and video still work.";
 } else {
@@ -86,6 +101,8 @@ if (!isOdoo) {
   $("#status").textContent = `${version}, debug ${d || "off"}`;
   $$(".mode").forEach((b) => b.classList.toggle("current", b.dataset.mode === current));
 }
+
+initDevTools({ tab, inPage, isOdoo, info });
 
 /* ---------------- Debug ---------------- */
 
@@ -329,35 +346,191 @@ async function refreshVideo() {
 refreshVideo();
 setInterval(refreshVideo, 1000);
 
-/* ---------------- Record info ---------------- */
+/* ---------------- Info tab ---------------- */
 
 const list = $("#infoList");
-const rows = isOdoo
-  ? [
-      ["Model", info.model],
-      ["Record ID", info.recordId],
-      ["View", info.viewType],
-      ["Action", info.action],
-      ["Database", info.database],
-      ["Version", info.version],
-      ["Debug", info.debug || "off"],
-    ]
-  : [["Status", "Not an Odoo page"]];
 
-for (const [label, value] of rows) {
-  const dt = document.createElement("dt");
-  const dd = document.createElement("dd");
-  dt.textContent = label;
-  dd.textContent = value || "-";
-  if (value) {
-    dd.title = "Copy";
-    dd.addEventListener("click", async () => {
-      await navigator.clipboard.writeText(value);
-      dd.classList.add("copied");
-      setTimeout(() => dd.classList.remove("copied"), 800);
-    });
+function copyable(dd, value) {
+  if (!value) return;
+  dd.title = "Copy";
+  dd.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(value);
+    dd.classList.add("copied");
+    setTimeout(() => dd.classList.remove("copied"), 800);
+  });
+}
+
+function addRows(target, rows) {
+  for (const [label, value, display] of rows) {
+    const dt = document.createElement("dt");
+    const dd = document.createElement("dd");
+    dt.textContent = label;
+    dd.textContent = display ?? (value || "-");
+    if (/^(Missing|No, )/.test(dd.textContent)) dd.classList.add("warn");
+    copyable(dd, value);
+    target.append(dt, dd);
   }
-  list.append(dt, dd);
+}
+
+if (isOdoo) {
+  addRows(list, [
+    ["Model", info.model],
+    ["Record ID", info.recordId],
+    ["View", info.viewType],
+    ["Action", info.action],
+    ["Database", info.database],
+    ["Version", info.version],
+    ["Debug", info.debug || "off"],
+  ]);
+} else {
+  addRows(list, [["Status", "", "Not an Odoo page"]]);
+  loadSiteInfo();
+}
+
+function section(title, extra) {
+  const wrap = document.createElement("section");
+  wrap.className = "site-section";
+  const head = document.createElement("h3");
+  head.textContent = title;
+  if (extra) head.append(extra);
+  wrap.append(head);
+  $("#siteInfo").append(wrap);
+  return wrap;
+}
+
+function dl(parent, rows) {
+  const d = document.createElement("dl");
+  addRows(d, rows);
+  parent.append(d);
+}
+
+const yesNo = (v, yes = "Yes", no = "No") => (v ? yes : no);
+
+async function loadSiteInfo() {
+  const box = $("#siteInfo");
+  box.hidden = false;
+  box.textContent = "Inspecting this website…";
+  const site = await inPage(collectSiteInfo);
+  box.textContent = "";
+
+  if (!site) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "This page cannot be inspected. Browser pages (chrome://), the Chrome Web Store and PDF viewers are blocked by Chrome.";
+    box.append(p);
+    return;
+  }
+
+  // Website
+  const web = section("Website");
+  dl(web, [
+    ["Host", site.host],
+    ["Title", site.title],
+    ["HTTPS", "", site.https ? "Yes" : "No, connection is not encrypted"],
+    ["Language", site.lang],
+    ["Charset", site.charset],
+    ...(site.generator ? [["Generator", site.generator]] : []),
+  ]);
+
+  // Technologies, grouped by category
+  const count = document.createElement("span");
+  count.className = "count";
+  count.textContent = String(site.tech.length);
+  const techSec = section("Technologies", count);
+  if (!site.tech.length) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "No known technologies detected.";
+    techSec.append(p);
+  } else {
+    const groups = new Map();
+    for (const t of site.tech) {
+      if (!groups.has(t.category)) groups.set(t.category, []);
+      groups.get(t.category).push(t);
+    }
+    const order = [...groups.keys()].sort(
+      (a, b) => (CATEGORY_ORDER.indexOf(a) + 99) % 99 - (CATEGORY_ORDER.indexOf(b) + 99) % 99
+    );
+    for (const cat of order) {
+      const row = document.createElement("div");
+      row.className = "tech-row";
+      const label = document.createElement("span");
+      label.className = "tech-cat";
+      label.textContent = cat;
+      const chips = document.createElement("div");
+      chips.className = "chips";
+      for (const t of groups.get(cat)) {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = t.name;
+        if (t.version) {
+          const v = document.createElement("small");
+          v.textContent = t.version;
+          chip.append(v);
+        }
+        chips.append(chip);
+      }
+      row.append(label, chips);
+      techSec.append(row);
+    }
+  }
+
+  // Performance
+  const perf = section("Performance");
+  const kb = site.transferKb >= 1024 ? `${(site.transferKb / 1024).toFixed(1)} MB` : `${site.transferKb} KB`;
+  dl(perf, [
+    ["Page load", "", site.loadMs != null ? `${(site.loadMs / 1000).toFixed(2)} s` : "Still loading"],
+    ["DOM ready", "", site.domReadyMs != null ? `${(site.domReadyMs / 1000).toFixed(2)} s` : "-"],
+    ["Requests", "", String(site.requests)],
+    ["Transferred", "", `${kb}${site.transferKb === 0 ? " (cached)" : ""}`],
+    ["DOM nodes", "", site.domNodes.toLocaleString()],
+  ]);
+
+  // SEO
+  const seo = section("SEO");
+  const titleLen = site.title.length;
+  dl(seo, [
+    ["Title length", "", `${titleLen} characters${titleLen > 60 ? " (long)" : titleLen && titleLen < 30 ? " (short)" : ""}`],
+    ["Description", site.description, site.description || "Missing"],
+    ["Canonical", site.canonical, site.canonical || "Missing"],
+    ["Robots", site.robots, site.robots || "Not set (indexable)"],
+    ["H1 headings", "", String(site.h1)],
+    ["Open Graph", site.ogTitle, site.ogTitle ? `${site.ogTitle}${site.ogImage ? " + image" : ""}` : "Missing"],
+    ["Mobile viewport", "", yesNo(site.viewport)],
+    ["Favicon", "", yesNo(site.favicon)],
+  ]);
+
+  // Server and security
+  const sec = section("Server and security");
+  const h = site.headers;
+  if (site.headersUnavailable) {
+    const p = document.createElement("p");
+    p.className = "hint";
+    p.textContent = "Response headers are not available for this page.";
+    sec.append(p);
+  } else {
+    dl(sec, [
+      ["Server", h.server, h.server || "Hidden"],
+      ["Powered by", h["x-powered-by"], h["x-powered-by"] || "Hidden"],
+      ["HSTS", h["strict-transport-security"], yesNo(h["strict-transport-security"], "Enabled", "Missing")],
+      ["CSP", h["content-security-policy"], yesNo(h["content-security-policy"], "Enabled", "Missing")],
+      ["Frame options", h["x-frame-options"], h["x-frame-options"] || "Missing"],
+      ["No-sniff", h["x-content-type-options"], h["x-content-type-options"] || "Missing"],
+      ["Referrer policy", h["referrer-policy"], h["referrer-policy"] || "Not set"],
+    ]);
+  }
+
+  // Copy full report
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "copy-report";
+  btn.textContent = "Copy website report";
+  btn.addEventListener("click", async () => {
+    await navigator.clipboard.writeText(reportText(site));
+    btn.textContent = "Copied";
+    setTimeout(() => (btn.textContent = "Copy website report"), 1200);
+  });
+  box.append(btn);
 }
 
 /* ---------------- Claude Usage meter ---------------- */

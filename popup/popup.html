@@ -8,14 +8,14 @@
   <header>
     <img src="../icons/32.png" alt="" width="28" height="28">
     <div class="head-text">
-      <h1>Odoo Dev Toolkit</h1>
+      <h1>Dev Toolkit for Odoo</h1>
       <p id="status">Checking this page…</p>
     </div>
     <div id="claude" class="claude" hidden></div>
   </header>
 
   <nav role="tablist">
-    <button role="tab" data-tab="debug">Debug</button>
+    <button role="tab" data-tab="debug">Dev</button>
     <button role="tab" data-tab="barcode">Barcode</button>
     <button role="tab" data-tab="capture">Screenshot</button>
     <button role="tab" data-tab="video">Video</button>
@@ -29,6 +29,74 @@
       <button class="mode odoo-only" data-mode="assets">Assets</button>
     </div>
     <p class="hint">Keyboard: <kbd>Ctrl</kbd>+<kbd>.</kbd> toggles debug. Press <kbd>.</kbd> twice for assets.</p>
+
+    <details class="tool" id="toolInspector" open>
+      <summary>Field inspector</summary>
+      <div class="tool-body">
+        <label class="check"><input id="inspectorToggle" type="checkbox"> Show a copy card for debug tooltips</label>
+        <p id="inspectorNote" class="hint" aria-live="polite"></p>
+        <div class="auto-row">
+          <p id="autoStatus" class="hint"></p>
+          <button id="autoToggle" type="button" class="small" hidden></button>
+        </div>
+      </div>
+    </details>
+
+    <details class="tool" id="toolExport">
+      <summary>Export fields</summary>
+      <div class="tool-body">
+        <label class="check"><input id="exportOnlyView" type="checkbox"> Only fields shown in this view</label>
+        <div class="btn-row three">
+          <button id="exportCsv" type="button">CSV</button>
+          <button id="exportJson" type="button">JSON</button>
+          <button id="exportCopy" type="button">Copy names</button>
+        </div>
+        <p id="exportNote" class="hint" aria-live="polite"></p>
+      </div>
+    </details>
+
+    <details class="tool" id="toolDomain">
+      <summary>Domain builder</summary>
+      <div class="tool-body">
+        <p class="hint">Model: <code id="domainModel">…</code></p>
+        <datalist id="domainFieldList"></datalist>
+        <div id="domainRows" class="domain-rows"></div>
+        <div class="btn-row three">
+          <button id="domainAdd" type="button">+ Condition</button>
+          <button id="domainTest" type="button">Test count</button>
+          <button id="domainClear" type="button">Clear</button>
+        </div>
+        <pre id="domainOut" class="code-out" aria-label="Generated domain">[]</pre>
+        <button id="domainCopy" type="button" class="primary">Copy domain</button>
+        <p id="domainNote" class="hint" aria-live="polite"></p>
+      </div>
+    </details>
+
+    <details class="tool" id="toolCompare">
+      <summary>Compare records</summary>
+      <div class="tool-body">
+        <div class="snap"><span class="snap-tag">A</span><span id="snapA" class="snap-name">Not captured</span><button id="captureA" type="button" class="small">Capture</button></div>
+        <div class="snap"><span class="snap-tag">B</span><span id="snapB" class="snap-name">Not captured</span><button id="captureB" type="button" class="small">Capture</button></div>
+        <div class="btn-row three">
+          <button id="compareRun" type="button" class="primary" disabled>Compare</button>
+          <button id="compareSwap" type="button">Swap</button>
+          <button id="compareReset" type="button">Reset</button>
+        </div>
+        <label class="check"><input id="compareShowSame" type="checkbox"> Show equal fields too</label>
+        <p id="compareNote" class="hint" aria-live="polite"></p>
+        <div id="compareResult" class="cmp-wrap"></div>
+        <button id="compareCopy" type="button">Copy differences</button>
+      </div>
+    </details>
+
+    <details class="tool" id="toolHistory">
+      <summary>Copy history <span id="historyCount" class="count">0</span></summary>
+      <div class="tool-body">
+        <input id="historySearch" type="search" placeholder="Search copied values" aria-label="Search copy history">
+        <ul id="historyList" class="history"></ul>
+        <button id="historyClear" type="button" class="small">Clear history</button>
+      </div>
+    </details>
   </section>
 
   <section id="barcode" class="panel">
@@ -83,12 +151,16 @@
 
   <section id="info" class="panel">
     <dl id="infoList"></dl>
+    <div id="siteInfo" class="site-info" hidden aria-live="polite"></div>
     <p class="hint">Click a value to copy it.</p>
   </section>
 
   <footer>
-    <a id="shortcuts" href="#">Change keyboard shortcuts</a>
-    <a id="claudeToggle" href="#"></a>
+    <div class="foot-links">
+      <a id="shortcuts" href="#">Change keyboard shortcuts</a>
+      <a id="claudeToggle" href="#"></a>
+    </div>
+    <p class="credit">Made by <a href="https://mostafa.bd" target="_blank" rel="noopener">Golam Mostafa</a></p>
   </footer>
 
   <script type="module" src="popup.js"></script>

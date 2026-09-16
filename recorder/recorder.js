@@ -1,5 +1,6 @@
 import { clearRecordings, putChunk, finishRecording } from "../lib/db.js";
 import { installClickOverlay, removeClickOverlay } from "./click-overlay.js";
+import { captureBlockedReason } from "../lib/blocked-urls.js";
 
 const $ = (sel) => document.querySelector(sel);
 const params = new URLSearchParams(location.search);
@@ -31,6 +32,7 @@ let resumedAt = 0;
 let ticker = 0;
 let discarding = false;
 let overlayTabId = null;
+let targetBlocked = null; // reason when the opener tab is a protected page
 
 /* ---------------- UI helpers ---------------- */
 
@@ -91,10 +93,21 @@ async function init() {
       $("#readyTarget").textContent = tab.title || tab.url || "Current tab";
       $("#readyTarget").title = tab.url || "";
       if (tab.url) host = new URL(tab.url).hostname || "tab";
+      targetBlocked = captureBlockedReason(tab.url || tab.pendingUrl);
     } catch {
       return fail("The tab to record is no longer open.");
     }
+    if (targetBlocked) {
+      $("#start").disabled = true;
+      $("#readyNote").textContent = `${targetBlocked} Choose "Screen or window" in the Video tab to record this page, or open the recorder from a normal website.`;
+    }
   } else {
+    try {
+      const tab = await chrome.tabs.get(opts.tabId);
+      targetBlocked = captureBlockedReason(tab.url || tab.pendingUrl);
+    } catch {
+      targetBlocked = null;
+    }
     $("#readyTitle").textContent = "Record screen or window";
     $("#readyTarget").textContent = "Chrome will ask what to share after you click Start.";
     if (opts.audio) {
@@ -227,7 +240,7 @@ async function waitForVideoFrames(stream, timeout = 4000) {
 
 // Click highlights are drawn inside the recorded page. No pointer is drawn.
 async function addOverlay(tabId) {
-  if (!opts.clicks) return;
+  if (!opts.clicks || targetBlocked) return; // protected pages cannot show highlights
   try {
     await chrome.scripting.executeScript({
       target: { tabId },
