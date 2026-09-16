@@ -1,6 +1,6 @@
 # Odoo Dev Toolkit
 
-**Version:** 1.4.6
+**Version:** 1.5.2
 **Type:** Chrome extension (Manifest V3)
 **Works with:** Odoo 16, 17, 18, 19 (backend web client)
 
@@ -47,6 +47,7 @@ One extension for everyday Odoo development: debug mode switching, barcode scan 
 | Screenshot editor | Crop, draw, highlight, add arrows, boxes, circles, text, hide data | Opens after each capture |
 | Screen recording | Record a tab, window or the whole screen with tab/system audio and microphone | Popup > **Video**, `Alt+Shift+R` |
 | Record info | Model, record ID, view, action, database, version | Popup > **Info** |
+| Claude Usage | Your Claude session (5-hour) and weekly usage, if signed in to claude.ai | Popup header, right side |
 | OWL inspector | Component tree, props, state, highlight, console access | DevTools > **Odoo OWL** |
 
 > **[SCREENSHOT]** Extension popup open on an Odoo page
@@ -168,14 +169,60 @@ Click the toolbar icon to open the popup.
 
 | Area | Description |
 |---|---|
-| **Header** | Shows the detected Odoo version and current debug mode, for example `Odoo 18.0, debug off`. On non-Odoo pages it shows `Not an Odoo page. Screenshots still work.` |
+| **Header (left)** | Shows the detected Odoo version and current debug mode, for example `Odoo 18.0, debug off`. On non-Odoo pages it shows `Not an Odoo page. Screenshots and video still work.` |
+| **Header (right)** | Claude Usage meter (see 5.1) |
 | **Tabs** | Debug, Barcode, Screenshot, Video, Info. The popup remembers the last tab you used. |
-| **Footer** | Link to keyboard shortcut settings. |
+| **Footer** | Link to keyboard shortcut settings, and **Show / Hide Claude Usage**. |
 
-On non-Odoo pages, Odoo-only buttons (debug modes, barcode scanning) are disabled. Screenshots work on any normal web page.
+On non-Odoo pages, Odoo-only buttons (debug modes, barcode scanning) are disabled. Screenshots and video recording work on any normal web page.
 
 > **[SCREENSHOT]** Popup header on an Odoo page vs a non-Odoo page
 > ![Popup header states](screenshots/08-popup-header.png)
+
+### 5.1 Claude Usage meter
+
+If you use Claude (claude.ai) in the same browser, the right side of the popup header shows your plan usage, the same numbers as **claude.ai > Settings > Usage**.
+
+| Row | Meaning | Reset line below the bar |
+|---|---|---|
+| **Session** | Usage of the current 5-hour session window | Time until the session resets and the clock time, for example `↻ in 2h 10m · 7:55 AM` |
+| **Weekly** | Usage of your weekly allowance | Time until the weekly reset with day and time, for example `↻ in 3d 0h · Sat 5:45 AM` |
+
+- Bar colors: white below 50%, yellow from 50%, red from 80%.
+- The reset countdowns update every 30 seconds while the popup is open.
+- The day name is left out when the reset is today.
+
+> **[SCREENSHOT]** Claude Usage meter in the popup header
+> ![Claude Usage meter](screenshots/39-claude-usage.png)
+
+**Turn it on (one time)**
+
+1. Sign in to [claude.ai](https://claude.ai) in this Chrome profile.
+2. Open the extension popup and click **Show Claude Usage** in the header.
+3. Chrome asks to allow the extension to read data on `claude.ai`. Click **Allow**.
+4. Chrome may close the popup while asking. Open it again and the meter appears.
+
+**Using it**
+
+- **Hover** the meter for a full summary, including model-specific weekly limits (for example Opus) when your plan has them.
+- **Click** the meter to open claude.ai usage settings.
+- Numbers refresh every time you open the popup. The last known values are shown dimmed until the refresh finishes.
+
+**Header states**
+
+| Shows | Meaning | What to do |
+|---|---|---|
+| **Show Claude Usage** | Permission not granted yet | Click it and allow access |
+| **Claude Usage…** | Loading | Wait a moment |
+| **Session / Weekly bars with reset times** | Working | Hover for the full summary |
+| **Claude: sign in** | Not signed in to claude.ai in this browser | Click to sign in, then reopen the popup |
+| **Claude Usage n/a** | Usage could not be read (free plan, API-only account, or claude.ai changed) | Hover for the reason; click to open claude.ai usage |
+
+**Turn it off**
+
+Click **Hide Claude Usage** in the popup footer. This hides the meter, deletes the cached values, and removes the `claude.ai` permission. Click **Show Claude Usage** in the footer to turn it back on.
+
+> **Note:** This reads the same internal claude.ai data that the Usage settings page uses. It is not an official public API, so it may stop working if claude.ai changes. The extension is not affiliated with Anthropic. No API key or password is needed or stored; it uses your existing browser sign-in.
 
 ---
 
@@ -863,6 +910,8 @@ Debugging:
 | macOS: window or screen recording is black or shows only the wallpaper | Chrome has no Screen Recording permission | **System Settings > Privacy & Security > Screen & System Audio Recording**, turn on Google Chrome, then quit and reopen Chrome |
 | Video timeline not seekable in some players | WebM files from browsers have no duration header | Use **This tab** mode on Chrome 126+ for MP4, open WebM in VLC or a browser, or convert it with ffmpeg |
 | "This recording is no longer stored" | A newer recording replaced it | Record again and download right away |
+| Claude Usage shows **Claude: sign in** while signed in | Signed in with another Chrome profile, or the session expired | Open claude.ai in this profile and sign in again, then reopen the popup |
+| Claude Usage shows **Claude Usage n/a** | Free plan, API-only account, or claude.ai changed its internal data | Hover the meter for the reason. Keep a claude.ai tab open and reopen the popup, since the extension can also read usage through an open tab |
 | Odoo OWL tab missing | DevTools was open before installing | Close and reopen DevTools |
 | "No OWL app found" | Non-backend page or Odoo older than 16 | Open an Odoo 16+ backend page, click **Refresh tree** |
 | Info tab shows `-` for model | Version-specific internals | Share the output of `!!odoo.__WOWL_DEBUG__, odoo.info` from the console |
@@ -875,12 +924,14 @@ Debugging:
 |---|---|
 | `activeTab` | Access the current tab only after you click the icon or use a shortcut |
 | `scripting` | Read Odoo info, switch debug mode, send barcodes, scroll during capture |
-| `storage` | Save settings, saved barcodes and recording state locally |
+| `storage` | Save settings, saved barcodes, recording state and the last Claude Usage values locally |
+| `https://claude.ai/*` (optional) | Read your Claude Usage for the header meter. Only requested when you click **Show Claude Usage**, and removed when you hide it |
 | `tabCapture` | Record the current tab's video and audio after you open the recorder from it |
 
 Privacy:
 
 - No data is sent anywhere. There are no external servers, analytics or tracking.
+- The Claude Usage meter only reads from `claude.ai` using your existing sign-in. It never sees or stores your password, and nothing is sent to any other site.
 - Screenshots and recordings are stored only in the browser's local IndexedDB, and only the latest of each is kept.
 - The microphone is used only while recording, and only after you allow it. Screen sharing always goes through Chrome's own picker.
 - The extension has no access to tabs you have not interacted with.
@@ -898,6 +949,7 @@ Privacy:
 - **Only one recording** is stored at a time.
 - **System audio** from the entire screen works on Windows and ChromeOS only.
 - **Screen and window recordings** are saved as WebM and limited to 1920 x 1080.
+- **Claude Usage meter** depends on internal claude.ai data and may stop working without notice. It shows usage only for plans that have Settings > Usage (Pro, Max, Team, Enterprise).
 - **Webcam overlay** is not included.
 - **Click highlights** are not available when sharing a window or the entire screen, and stop after a full page reload.
 - **Closing the recorder window** during recording loses the video.
@@ -973,6 +1025,7 @@ odoo-dev-toolkit/
 ├── manifest.json          Extension config, permissions, shortcuts
 ├── background.js          Service worker: shortcuts, capture, stitching, recorder window
 ├── lib/
+│   ├── claude-usage.js    Reads Claude session and weekly usage from claude.ai
 │   └── db.js              IndexedDB storage for the latest screenshot and recording
 ├── popup/
 │   ├── popup.html         Popup layout (Debug, Barcode, Screenshot, Video, Info)
@@ -1047,5 +1100,6 @@ Save each image in `screenshots/` with these names.
 | 36 | `36-click-highlight.png` | Click ring in a recording |
 | 37 | `37-macos-screen-permission.png` | macOS Screen Recording permission for Chrome |
 | 38 | `38-wayland-share-dialog.png` | Ubuntu system share dialog on Wayland |
+| 39 | `39-claude-usage.png` | Claude Usage meter in the popup header |
 
 > **Tip:** You can take most of these with the extension itself. Use **Capture visible area**, crop to the relevant part, add an arrow or box, and download as PNG.

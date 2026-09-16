@@ -1,3 +1,7 @@
+import {
+  hasPermission, requestPermission, removePermission, fetchUsage, readCache, clearCache, formatReset, formatResetShort,
+} from "../lib/claude-usage.js";
+
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
@@ -21,6 +25,7 @@ async function inPage(func, args = []) {
 
 const settings = await chrome.storage.local.get({
   lastTab: "debug",
+  claudeUsage: true,
   delay: 500,
   cmdDelay: 1000,
   closeAfter: true,
@@ -73,7 +78,7 @@ const isOdoo = Boolean(info);
 $$(".odoo-only").forEach((el) => (el.disabled = !isOdoo));
 
 if (!isOdoo) {
-  $("#status").textContent = "Not an Odoo page. Screenshots still work.";
+  $("#status").textContent = "Not an Odoo page. Screenshots and video still work.";
 } else {
   const d = info.debug;
   const current = !d ? "0" : d.includes("assets") ? "assets" : "1";
@@ -354,3 +359,132 @@ for (const [label, value] of rows) {
   }
   list.append(dt, dd);
 }
+
+/* ---------------- Claude Usage meter ---------------- */
+
+const USAGE_URL = "https://claude.ai/settings/usage";
+const claudeEl = $("#claude");
+const claudeToggle = $("#claudeToggle");
+
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text != null) e.textContent = text;
+  return e;
+}
+
+function openUrl(url) {
+  chrome.tabs.create({ url });
+  window.close();
+}
+
+function meterRow(label, w) {
+  const wrap = el("div", "cu-item");
+  const row = el("div", "cu-row");
+  wrap.append(row);
+  if (!w) {
+    row.append(el("span", "", label), el("div", "cu-bar"), el("span", "cu-pct", "-"));
+    return wrap;
+  }
+  row.classList.toggle("warn", w.percent >= 50 && w.percent < 80);
+  row.classList.toggle("high", w.percent >= 80);
+  const bar = el("div", "cu-bar");
+  const fill = el("i");
+  fill.style.width = `${w.percent}%`;
+  bar.append(fill);
+  bar.setAttribute("role", "img");
+  bar.setAttribute("aria-label", `${label} ${w.percent}% used`);
+  row.append(el("span", "", label), bar, el("span", "cu-pct", `${w.percent}%`));
+  const reset = el("div", "cu-reset", `↻ ${formatResetShort(w.resetsAt)}`);
+  reset.dataset.resetsAt = w.resetsAt || "";
+  wrap.append(reset);
+  return wrap;
+}
+
+// Keep the countdowns current while the popup stays open.
+setInterval(() => {
+  document.querySelectorAll(".cu-reset[data-resets-at]").forEach((r) => {
+    const ts = Number(r.dataset.resetsAt);
+    if (ts) r.textContent = `↻ ${formatResetShort(ts)}`;
+  });
+}, 30000);
+
+function renderUsage(usage, { stale = false, at = Date.now() } = {}) {
+  const box = el("a", "cu-box");
+  box.href = USAGE_URL;
+  box.addEventListener("click", (e) => {
+    e.preventDefault();
+    openUrl(USAGE_URL);
+  });
+  const title = el("div", "cu-title");
+  title.append(el("span", "", "Claude Usage"), el("span", "", stale ? "…" : ""));
+  box.append(title, meterRow("Session", usage.session), meterRow("Weekly", usage.weekly));
+  if (stale) box.classList.add("cu-stale");
+
+  const lines = [];
+  if (usage.orgName) lines.push(usage.orgName);
+  if (usage.session) lines.push(`Session (5 hours): ${usage.session.percent}% used, ${formatReset(usage.session.resetsAt)}`);
+  if (usage.weekly) lines.push(`Weekly: ${usage.weekly.percent}% used, ${formatReset(usage.weekly.resetsAt)}`);
+  for (const x of usage.extras || []) lines.push(`${x.label}: ${x.percent}% used, ${formatReset(x.resetsAt)}`);
+  lines.push(`Updated ${new Date(at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Click to open claude.ai usage.`);
+  box.title = lines.join("\n");
+  claudeEl.replaceChildren(box);
+}
+
+function renderNote(text, title, onClick) {
+  const btn = el("button", "cu-note", text);
+  btn.type = "button";
+  if (title) btn.title = title;
+  btn.addEventListener("click", onClick);
+  claudeEl.replaceChildren(btn);
+}
+
+async function loadUsage() {
+  const cache = await readCache();
+  if (cache?.usage) renderUsage(cache.usage, { stale: true, at: cache.at });
+  else claudeEl.replaceChildren(el("div", "cu-note", "Claude Usage…"));
+
+  try {
+    const usage = await fetchUsage();
+    renderUsage(usage);
+  } catch (e) {
+    if (e.code === "signed_out") {
+      renderNote("Claude: sign in", "Sign in to claude.ai in this browser to see your usage", () => openUrl("https://claude.ai/login"));
+    } else if (cache?.usage) {
+      renderUsage(cache.usage, { stale: true, at: cache.at });
+      claudeEl.firstChild.title += `\n\nCould not refresh: ${e.message}`;
+    } else {
+      renderNote("Claude Usage n/a", `${e.message}. Click to open claude.ai usage.`, () => openUrl(USAGE_URL));
+    }
+  }
+}
+
+async function setupClaude() {
+  const enabled = settings.claudeUsage;
+  claudeToggle.textContent = enabled ? "Hide Claude Usage" : "Show Claude Usage";
+  claudeEl.hidden = !enabled;
+  if (!enabled) return;
+
+  if (!(await hasPermission())) {
+    renderNote("Show Claude Usage", "Allow reading your usage from claude.ai (needs you to be signed in)", async () => {
+      // Chrome may close the popup while asking; usage shows next time it opens.
+      const granted = await requestPermission().catch(() => false);
+      if (granted) loadUsage();
+    });
+    return;
+  }
+  loadUsage();
+}
+
+claudeToggle.addEventListener("click", async (e) => {
+  e.preventDefault();
+  settings.claudeUsage = !settings.claudeUsage;
+  await save({ claudeUsage: settings.claudeUsage });
+  if (!settings.claudeUsage) {
+    await clearCache();
+    await removePermission().catch(() => {});
+  }
+  setupClaude();
+});
+
+setupClaude();

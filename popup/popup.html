@@ -7,10 +7,11 @@
 <body>
   <header>
     <img src="../icons/32.png" alt="" width="28" height="28">
-    <div>
+    <div class="head-text">
       <h1>Odoo Dev Toolkit</h1>
       <p id="status">Checking this page…</p>
     </div>
+    <div id="claude" class="claude" hidden></div>
   </header>
 
   <nav role="tablist">
@@ -85,7 +86,10 @@
     <p class="hint">Click a value to copy it.</p>
   </section>
 
-  <footer><a id="shortcuts" href="#">Change keyboard shortcuts</a></footer>
+  <footer>
+    <a id="shortcuts" href="#">Change keyboard shortcuts</a>
+    <a id="claudeToggle" href="#"></a>
+  </footer>
 
   <script type="module" src="popup.js"></script>
 </body>

@@ -10,6 +10,7 @@ One extension combining:
 | Screen recording (this tab, window or screen) with tab/system audio, microphone, click highlights, pause, mute, MP4 (tab) / WebM (screen) download | Popup > Video, `Alt+Shift+R` |
 | OWL component inspector (tree, props, state, highlight, $owl) | DevTools > "Odoo OWL" tab |
 | Current model / record ID / action / version | Popup > Info |
+| Claude session and weekly usage (when signed in to claude.ai) | Popup header, right side |
 
 ## Install locally
 1. `chrome://extensions` > enable Developer mode.

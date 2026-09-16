@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Odoo Dev Toolkit",
-  "version": "1.4.6",
+  "version": "1.5.2",
   "description": "Odoo debug toggle, barcode scan simulator, OWL inspector, full page screenshots and screen recording with audio.",
   "icons": {
     "16": "icons/16.png",
@@ -48,5 +48,8 @@
       },
       "description": "Start or stop screen recording"
     }
-  }
+  },
+  "optional_host_permissions": [
+    "https://claude.ai/*"
+  ]
 }
